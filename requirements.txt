@@ -11,3 +11,9 @@ passlib
 PyJWT
 uvicorn
 requests
+pandas
+numpy
+matplotlib
+scikit-learn
+pytest
+seaborn
