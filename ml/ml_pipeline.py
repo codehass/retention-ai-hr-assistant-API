@@ -1,20 +1,14 @@
+import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.feature_selection import SelectKBest, f_regression
-from sklearn.svm import SVR
 from sklearn.model_selection import train_test_split
-import pandas as pd
-
 from sklearn.model_selection import GridSearchCV
 
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
 def prepare_data(
@@ -98,3 +92,59 @@ def train_and_evaluate(
     pipeline.fit(X_train, y_train)
 
     return evaluate_classifier(pipeline, X_test, y_test)
+
+
+def train_with_grid_search(
+    model_type,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    numerical_features,
+    categorical_features,
+):
+    param_grid_logistic = {
+        "model__C": [0.1, 1, 10],
+        "model__penalty": ["l2"],
+        "model__solver": ["lbfgs"],
+    }
+
+    param_grid_rf = {
+        "model__n_estimators": [100, 200],
+        "model__max_depth": [None, 10, 20],
+        "model__min_samples_split": [2, 5],
+    }
+
+    param_grid_gb = {
+        "model__n_estimators": [100, 200],
+        "model__learning_rate": [0.05, 0.1],
+        "model__max_depth": [3, 5],
+    }
+
+    if model_type == "logistic":
+        model = LogisticRegression(random_state=42, max_iter=1000)
+        param_grid = param_grid_logistic
+
+    elif model_type == "randomForest":
+        model = RandomForestClassifier(random_state=42)
+        param_grid = param_grid_rf
+
+    elif model_type == "gradientBoosting":
+        model = GradientBoostingClassifier(random_state=42)
+        param_grid = param_grid_gb
+
+    else:
+        raise ValueError("Invalid model type")
+
+    pipeline = model_pipeline(numerical_features, categorical_features, model)
+
+    grid_search = GridSearchCV(
+        pipeline, param_grid, cv=5, n_jobs=-1, scoring="accuracy"
+    )
+
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+    best_score = grid_search.best_score_
+
+    return evaluate_classifier(best_model, X_test, y_test), best_score
