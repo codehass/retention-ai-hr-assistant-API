@@ -77,3 +77,16 @@ async def logout_user(response: Response):
         path="/",
     )
     return {"msg": "Logged out successfully!"}
+
+
+@router.get("/status")
+async def get_auth(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return {"authenticated": False}
+    return {"authenticated": True}
+
+
+@router.get("/users/me", response_model=UserSchema)
+async def read_users_me(current_user: UserSchema = Depends(get_current_user)):
+    return current_user
