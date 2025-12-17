@@ -9,19 +9,20 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 
-def prepare_data(
-    df, numerical_features=None, categorical_features=None, target="Attrition"
-):
+def prepare_data(df, num_list, cat_list, encoded_list, target="Attrition"):
     df_copy = df.copy()
 
-    categorical_features_df = df_copy[categorical_features]
-    numerical_features_df = df_copy[numerical_features]
+    categorical_features_df = df_copy[cat_list]
+    numerical_features_df = df_copy[num_list]
+    ord_df = df_copy[encoded_list]
     target_df = df_copy[target]
 
     data_prepared = pd.concat(
-        [categorical_features_df, numerical_features_df, target_df], axis=1
+        [categorical_features_df, numerical_features_df, ord_df, target_df], axis=1
     )
 
     data_prepared[target] = data_prepared[target].map({"Yes": 1, "No": 0})
@@ -36,7 +37,7 @@ def prepare_data(
     return X_train, X_test, y_train, y_test, data_prepared
 
 
-def model_pipeline(num_list, cat_list, model):
+def model_pipeline(num_list, cat_list, encoded_list, model):
 
     numeric_transformer = Pipeline(steps=[("scaler", StandardScaler())])
 
@@ -48,6 +49,7 @@ def model_pipeline(num_list, cat_list, model):
         transformers=[
             ("num", numeric_transformer, num_list),
             ("cat", categorical_transformer, cat_list),
+            ("ord", "passthrough", encoded_list),
         ]
     )
 
@@ -67,7 +69,7 @@ def evaluate_classifier(model, X_test, y_test):
     recall = recall_score(y_test, y_pred, average="binary")
     f1 = f1_score(y_test, y_pred, average="binary")
 
-    return accuracy, precision, recall, f1
+    return accuracy, precision, recall, f1, y_pred
 
 
 def train_and_evaluate(
@@ -78,17 +80,26 @@ def train_and_evaluate(
     y_test,
     numerical_features,
     categorical_features,
+    already_encoded,
 ):
     if model_type == "logistic":
-        model = LogisticRegression(random_state=42, max_iter=1000)
+        model = LogisticRegression(
+            random_state=42,
+            max_iter=1000,
+            solver="saga",
+            l1_ratio=0,
+            class_weight="balanced",
+        )
     elif model_type == "randomForest":
-        model = RandomForestClassifier(random_state=42)
+        model = RandomForestClassifier(random_state=42, class_weight="balanced")
     elif model_type == "gradientBoosting":
         model = GradientBoostingClassifier(random_state=42)
     else:
         raise ValueError("Invalid model type")
 
-    pipeline = model_pipeline(numerical_features, categorical_features, model)
+    pipeline = model_pipeline(
+        numerical_features, categorical_features, already_encoded, model
+    )
     pipeline.fit(X_train, y_train)
 
     return evaluate_classifier(pipeline, X_test, y_test)
@@ -102,11 +113,10 @@ def train_with_grid_search(
     y_test,
     numerical_features,
     categorical_features,
+    already_encoded,
 ):
     param_grid_logistic = {
         "model__C": [0.1, 1, 10],
-        "model__penalty": ["l2"],
-        "model__solver": ["lbfgs"],
     }
 
     param_grid_rf = {
@@ -122,11 +132,17 @@ def train_with_grid_search(
     }
 
     if model_type == "logistic":
-        model = LogisticRegression(random_state=42, max_iter=1000)
+        model = LogisticRegression(
+            random_state=42,
+            max_iter=1000,
+            solver="saga",
+            l1_ratio=0,
+            class_weight="balanced",
+        )
         param_grid = param_grid_logistic
 
     elif model_type == "randomForest":
-        model = RandomForestClassifier(random_state=42)
+        model = RandomForestClassifier(random_state=42, class_weight="balanced")
         param_grid = param_grid_rf
 
     elif model_type == "gradientBoosting":
@@ -136,7 +152,9 @@ def train_with_grid_search(
     else:
         raise ValueError("Invalid model type")
 
-    pipeline = model_pipeline(numerical_features, categorical_features, model)
+    pipeline = model_pipeline(
+        numerical_features, categorical_features, already_encoded, model
+    )
 
     grid_search = GridSearchCV(
         pipeline, param_grid, cv=5, n_jobs=-1, scoring="accuracy"
@@ -148,3 +166,11 @@ def train_with_grid_search(
     best_score = grid_search.best_score_
 
     return evaluate_classifier(best_model, X_test, y_test), best_score
+
+
+def plot_matrix(ax, y_test, y_pred, title=None):
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(cm)
+    disp.plot(ax=ax, cmap="Blues", colorbar=False)
+    if title:
+        ax.set_title(f"Confusion Matrix - {title}")
