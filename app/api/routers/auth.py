@@ -65,3 +65,15 @@ async def login_for_access_token(
         max_age=timedelta(hours=1),
     )
     return {"msg": "Login successful!"}
+
+
+@router.post("/logout")
+async def logout_user(response: Response):
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path="/",
+    )
+    return {"msg": "Logged out successfully!"}
