@@ -13,6 +13,10 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
+
+
 def prepare_data(df, num_list, cat_list, encoded_list, target="Attrition"):
     df_copy = df.copy()
 
@@ -37,7 +41,7 @@ def prepare_data(df, num_list, cat_list, encoded_list, target="Attrition"):
     return X_train, X_test, y_train, y_test, data_prepared
 
 
-def model_pipeline(num_list, cat_list, encoded_list, model):
+def model_pipeline(num_list, cat_list, encoded_list, model, use_smote=False):
 
     numeric_transformer = Pipeline(steps=[("scaler", StandardScaler())])
 
@@ -50,15 +54,22 @@ def model_pipeline(num_list, cat_list, encoded_list, model):
             ("num", numeric_transformer, num_list),
             ("cat", categorical_transformer, cat_list),
             ("ord", "passthrough", encoded_list),
-        ]
+        ],
+        # remainder="drop",
     )
 
-    return Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", model),
-        ]
-    )
+    steps = [("preprocessor", preprocessor)]
+
+    if use_smote == True:
+        return ImbPipeline(
+            steps
+            + [
+                ("smote", SMOTE(random_state=42)),
+                ("model", model),
+            ]
+        )
+
+    return Pipeline(steps + [("model", model)])
 
 
 def evaluate_classifier(model, X_test, y_test):
