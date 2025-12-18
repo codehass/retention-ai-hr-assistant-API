@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
-from datetime import datetime
+from typing import List
 
 
 class UserBase(BaseModel):
@@ -61,3 +61,29 @@ class EmployeeAttritionRequest(BaseModel):
     JobRole: str
     MaritalStatus: str
     OverTime: str
+
+
+class RetentionPlanRequest(BaseModel):
+    prediction_id: int
+
+
+class RetentionPlanResponse(BaseModel):
+    plan_id: int
+    prediction_id: int
+    retention_plan: list[str]
+    status: str = "success"
+
+
+class GeminiResponse(BaseModel):
+    retention_plan: List[str] = Field(
+        min_items=3,
+        max_items=3,
+    )
+
+
+class RetentionPlanResponse(BaseModel):
+    id: int
+    prediction_id: int
+    plan_content: list[str]
+
+    model_config = ConfigDict(from_attributes=True)
