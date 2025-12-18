@@ -19,3 +19,4 @@ pytest
 seaborn
 imbalanced-learn==0.14
 pydantic-settings
+google-genai
