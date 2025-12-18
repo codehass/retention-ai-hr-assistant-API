@@ -11,6 +11,6 @@ class PredictionHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     churn_probability = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    employee_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    employee_id = Column(Integer, nullable=False)
 
     user = relationship("User", back_populates="history")
