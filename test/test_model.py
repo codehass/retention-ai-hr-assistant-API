@@ -1,12 +1,11 @@
-import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import patch
+from unittest.mock import MagicMock
 from app.models.employee_attrition import EmployeeAttrition
 
 
-@patch("app.predictor.model")
-def test_model_prediction_logic(mock_model):
+def test_model_prediction_logic():
+    mock_model = MagicMock()
     mock_model.predict.return_value = np.array([1])
     mock_model.predict_proba.return_value = np.array([[0.15, 0.85]])
 
@@ -35,7 +34,11 @@ def test_model_prediction_logic(mock_model):
         OverTime="Yes",
     )
 
-    df = pd.DataFrame([sample_employee.model_dump()])
+    employee_dict = {
+        c.name: getattr(sample_employee, c.name)
+        for c in sample_employee.__table__.columns
+    }
+    df = pd.DataFrame([employee_dict])
 
     pred = mock_model.predict(df)[0]
     prob = mock_model.predict_proba(df)[0][1]
