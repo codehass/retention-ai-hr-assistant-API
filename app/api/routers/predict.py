@@ -12,7 +12,7 @@ from ...schemas.user_schema import (
     RetentionPlanResponse,
 )
 from ...services.service_gemini import gemini_service
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 import pandas as pd
 import joblib
 import json
@@ -22,7 +22,7 @@ model = joblib.load("./ml/model_smote.pkl")
 router = APIRouter(prefix="/api/v1/predict", tags=["Prediction routes"])
 
 
-@router.post("/predict-attrition/")
+@router.post("/predict-attrition")
 async def predict_attrition(
     employee: EmployeeAttritionRequest,
     current_user: UserSchema = Depends(get_current_user),
@@ -57,37 +57,41 @@ async def predict_attrition(
 
 
 @router.post("/generate-retention-plan", response_model=RetentionPlanResponse)
-async def predict_attrition(
+async def generate_retention_plan_endpoint(
     request: RetentionPlanRequest, db: Session = Depends(get_db)
 ):
-    prediction = (
-        db.query(PredictionHistory)
-        .filter(PredictionHistory.id == request.prediction_id)
-        .first()
-    )
-    if not prediction:
-        return {"error": "Prediction not found"}
-    employee = (
-        db.query(EmployeeAttrition)
-        .filter(EmployeeAttrition.id == prediction.employee_id)
-        .first()
-    )
+    try:
+        prediction = (
+            db.query(PredictionHistory)
+            .filter(PredictionHistory.id == request.prediction_id)
+            .first()
+        )
+        if not prediction:
+            raise HTTPException(status_code=404, detail="Prediction not found")
 
-    if prediction.churn_probability < 0.50:
-        return {"message": "Low risk detected. No retention plan required."}
+        employee = (
+            db.query(EmployeeAttrition)
+            .filter(EmployeeAttrition.id == prediction.employee_id)
+            .first()
+        )
 
-    plan_text = gemini_service(employee, prediction, GeminiResponse)
-    if isinstance(plan_text, str):
-        plan_text = json.loads(plan_text)
+        plan_text = gemini_service(employee, prediction, GeminiResponse)
 
-    action_one = plan_text["retention_plan"][0]
-    action_two = plan_text["retention_plan"][1]
-    action_three = plan_text["retention_plan"][2]
+        if isinstance(plan_text, str):
+            plan_text = json.loads(plan_text)
 
-    plans = [action_one, action_two, action_three]
+        plans = plan_text.get("retention_plan", [])
 
-    new_plan = RetentionPlan(prediction_id=prediction.id, plan_content=plans)
-    db.add(new_plan)
-    db.commit()
+        if not plans:
+            plans = ["Review compensation", "Schedule 1-on-1", "Discuss career path"]
 
-    return new_plan
+        new_plan = RetentionPlan(prediction_id=prediction.id, plan_content=plans)
+
+        db.add(new_plan)
+        db.commit()
+        db.refresh(new_plan)
+
+        return new_plan
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Backend Error: {str(e)}")

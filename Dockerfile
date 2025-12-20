@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY ./app /code/app
+COPY ./ml /code/ml 
 
 EXPOSE 8000
 
