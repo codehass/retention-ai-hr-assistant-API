@@ -6,8 +6,14 @@ from .api.routers import auth, predict
 from .config import settings
 
 app = FastAPI(
-    title="HR API",
-    description=("This HR API"),
+    title="RetentionAI API",
+    description=(
+        "RetentionAI is an HR decision-support API that combines supervised machine learning "
+        "and generative AI. It predicts employee attrition risk based on HR data and generates "
+        "personalized retention plans for at-risk employees. The API is secure (JWT), backed by "
+        "a PostgreSQL database, and deployable via Docker, providing an industrial-grade, "
+        "explainable, and business-oriented solution."
+    ),
 )
 
 
