@@ -60,16 +60,16 @@ def model_pipeline(num_list, cat_list, encoded_list, model, use_smote=False):
 
     steps = [("preprocessor", preprocessor)]
 
-    if use_smote == True:
+    if use_smote:
         return ImbPipeline(
-            steps
-            + [
+            [
+                *steps,
                 ("smote", SMOTE(random_state=42)),
                 ("model", model),
             ]
         )
 
-    return Pipeline(steps + [("model", model)])
+    return Pipeline([*steps, ("model", model)])
 
 
 def evaluate_classifier(model, X_test, y_test):
