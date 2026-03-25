@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Annotated
 
 import pandas as pd
@@ -21,6 +22,7 @@ from app.schemas.prediction import (
 )
 from app.services.gemini import gemini_service
 from app.services.ml import ml_service
+from app.services.mlflow import mlflow_service
 
 router = APIRouter(prefix="/predict", tags=["Prediction"])
 
@@ -33,6 +35,8 @@ async def predict_attrition(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PredictionHistory:
+    start_time = time.perf_counter()
+
     employee = EmployeeAttrition(**employee_data.model_dump())
     db.add(employee)
     db.commit()
@@ -51,6 +55,20 @@ async def predict_attrition(
     db.commit()
     db.refresh(prediction_record)
 
+    latency_ms = (time.perf_counter() - start_time) * 1000
+
+    try:
+        mlflow_service.log_prediction(
+            user_id=current_user.id,
+            prediction_id=prediction_record.id,
+            employee_data=employee_data.model_dump(),
+            prediction=prediction,
+            probability=float(probability),
+            latency_ms=latency_ms,
+        )
+    except Exception as e:
+        logger.warning("Failed to log prediction to MLflow: %s", str(e))
+
     logger.info(
         "Prediction created for employee %s by user %s: probability=%.4f",
         employee.id,
@@ -67,6 +85,8 @@ async def generate_retention_plan(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RetentionPlan:
+    start_time = time.perf_counter()
+
     prediction = (
         db.query(PredictionHistory)
         .filter(PredictionHistory.id == request.prediction_id)
@@ -121,6 +141,17 @@ async def generate_retention_plan(
     db.add(retention_plan)
     db.commit()
     db.refresh(retention_plan)
+
+    latency_ms = (time.perf_counter() - start_time) * 1000
+
+    try:
+        mlflow_service.log_retention_plan(
+            prediction_id=prediction.id,
+            plan_content=plans,
+            latency_ms=latency_ms,
+        )
+    except Exception as e:
+        logger.warning("Failed to log retention plan to MLflow: %s", str(e))
 
     logger.info("Retention plan created for prediction %s", prediction.id)
 
