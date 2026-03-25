@@ -1,9 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import (
     authenticate_user,
     create_access_token,
@@ -82,7 +84,13 @@ async def get_current_user_info(
 
 
 @router.get("/status")
-async def auth_status(
-    current_user: Annotated[User | None, Depends(get_current_user)] = None,
-) -> dict:
-    return {"authenticated": current_user is not None}
+async def auth_status(request: Request) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        return {"authenticated": False}
+
+    try:
+        jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return {"authenticated": True}
+    except jwt.InvalidTokenError:
+        return {"authenticated": False}
