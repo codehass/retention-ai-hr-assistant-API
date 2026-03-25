@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
 from pydantic import BaseModel
+
 from app.services.service_gemini import gemini_service
 
 

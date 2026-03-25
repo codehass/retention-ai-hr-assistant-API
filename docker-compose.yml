@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: retention_ai_db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-retention_user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-retention_pass}
+      POSTGRES_DB: ${DATABASE_NAME:-retention_ai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-retention_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: retention_ai_api
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-retention_ai}
+      DATABASE_USER: ${DATABASE_USER:-retention_user}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-retention_pass}
+      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  postgres_data:

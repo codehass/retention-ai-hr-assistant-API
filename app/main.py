@@ -1,37 +1,48 @@
-import os
+import logging
+
 from fastapi import FastAPI
-from .db.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-from .api.routers import auth, predict
-from .config import settings
 
-app = FastAPI(
-    title="RetentionAI API",
-    description=(
-        "RetentionAI is an HR decision-support API that combines supervised machine learning "
-        "and generative AI. It predicts employee attrition risk based on HR data and generates "
-        "personalized retention plans for at-risk employees. The API is secure (JWT), backed by "
-        "a PostgreSQL database, and deployable via Docker, providing an industrial-grade, "
-        "explainable, and business-oriented solution."
-    ),
-)
+from app.api.v1.router import api_router
+from app.core.config import settings
+from app.db.base import Base
+from app.db.session import engine
+from app.utils.logging import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
-origins = [settings.FRONTEND_URL]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def create_app() -> FastAPI:
+    setup_logging()
 
-Base.metadata.create_all(bind=engine)
+    app = FastAPI(
+        title="RetentionAI API",
+        description=(
+            "HR decision-support API that combines supervised machine learning and generative AI. "
+            "Predicts employee attrition risk and generates personalized retention plans."
+        ),
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
 
-app.include_router(auth.router)
-app.include_router(predict.router)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[settings.FRONTEND_URL],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+
+    Base.metadata.create_all(bind=engine)
+
+    app.include_router(api_router, prefix="/api/v1")
+
+    @app.get("/", tags=["Root"])
+    async def root() -> dict:
+        return {"message": "RetentionAI HR API", "version": "1.0.0"}
+
+    return app
 
 
-@app.get("/", tags=["Home route"])
-def get_home():
-    return {"message": "Hello to HR Retention API"}
+app = create_app()
