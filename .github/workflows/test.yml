@@ -10,6 +10,12 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_NAME: test_db
+      DATABASE_USER: test_user
+      DATABASE_PASSWORD: test_pass
+      SECRET_KEY: test-secret-key-for-ci
+      GEMINI_API_KEY: test-api-key
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
