@@ -37,7 +37,14 @@ class MLService:
         if self._model is None:
             raise RuntimeError("ML model not loaded")
 
-        probability = self._model.predict_proba(data)[0][1]
+        # Map snake_case (schema) to PascalCase (model expectation)
+        mapping = {col: "".join(word.capitalize() for word in col.split("_")) for col in data.columns}
+        data_mapped = data.rename(columns=mapping)
+
+        # For some specific columns if capitalization differs from simple PascalCase
+        # but based on the error message, simple PascalCase seems to be what it wants.
+
+        probability = self._model.predict_proba(data_mapped)[0][1]
         prediction = 1 if probability >= 0.5 else 0
         return prediction, probability
 
@@ -47,7 +54,8 @@ class MLService:
 
         if hasattr(self._model, "feature_importances_"):
             importances = self._model.feature_importances_
-            features = data.columns
+            # Map features to PascalCase to match the model's training features
+            features = ["".join(word.capitalize() for word in col.split("_")) for col in data.columns]
             return dict(zip(features, importances, strict=True))
         return {}
 

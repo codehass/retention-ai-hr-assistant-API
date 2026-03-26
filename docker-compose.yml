@@ -23,7 +23,7 @@ services:
     container_name: retention_ai_api
     environment:
       DATABASE_HOST: db
-      DATABASE_PORT: 54323
+      DATABASE_PORT: 5432
       DATABASE_NAME: ${DATABASE_NAME:-retention_ai}
       DATABASE_USER: ${DATABASE_USER:-retention_user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-retention_pass}
@@ -47,6 +47,9 @@ services:
       - "5000:5000"
     volumes:
       - mlflow_data:/mlflow
+    environment:
+      - MLFLOW_SERVER_HOST=0.0.0.0
+      - MLFLOW_SERVER_PORT=5000
     command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow/artifacts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]

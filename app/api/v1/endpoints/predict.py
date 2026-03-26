@@ -34,7 +34,7 @@ async def predict_attrition(
     employee_data: EmployeeAttritionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-) -> PredictionHistory:
+) -> PredictionResponse:
     start_time = time.perf_counter()
 
     employee = EmployeeAttrition(**employee_data.model_dump())
