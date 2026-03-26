@@ -20,7 +20,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 COOKIE_SETTINGS = {
     "httponly": True,
-    "secure": True,
+    "secure": False,
     "samesite": "Lax",
 }
 
