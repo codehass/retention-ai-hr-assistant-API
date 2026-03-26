@@ -156,3 +156,30 @@ async def generate_retention_plan(
     logger.info("Retention plan created for prediction %s", prediction.id)
 
     return retention_plan
+
+
+@router.get("/attrition/history", response_model=list[PredictionResponse])
+async def get_attrition_history(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[PredictionHistory]:
+    return (
+        db.query(PredictionHistory)
+        .filter(PredictionHistory.user_id == current_user.id)
+        .order_by(PredictionHistory.created_at.desc())
+        .all()
+    )
+
+
+@router.get("/retention-plan/history", response_model=list[RetentionPlanResponse])
+async def get_retention_plan_history(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RetentionPlan]:
+    return (
+        db.query(RetentionPlan)
+        .join(PredictionHistory)
+        .filter(PredictionHistory.user_id == current_user.id)
+        .order_by(PredictionHistory.created_at.desc())
+        .all()
+    )
