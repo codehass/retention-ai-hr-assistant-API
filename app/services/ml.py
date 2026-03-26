@@ -38,7 +38,10 @@ class MLService:
             raise RuntimeError("ML model not loaded")
 
         # Map snake_case (schema) to PascalCase (model expectation)
-        mapping = {col: "".join(word.capitalize() for word in col.split("_")) for col in data.columns}
+        mapping = {
+            col: "".join(word.capitalize() for word in col.split("_"))
+            for col in data.columns
+        }
         data_mapped = data.rename(columns=mapping)
 
         # For some specific columns if capitalization differs from simple PascalCase
@@ -55,7 +58,10 @@ class MLService:
         if hasattr(self._model, "feature_importances_"):
             importances = self._model.feature_importances_
             # Map features to PascalCase to match the model's training features
-            features = ["".join(word.capitalize() for word in col.split("_")) for col in data.columns]
+            features = [
+                "".join(word.capitalize() for word in col.split("_"))
+                for col in data.columns
+            ]
             return dict(zip(features, importances, strict=True))
         return {}
 
