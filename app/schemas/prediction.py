@@ -2,12 +2,12 @@ from pydantic import BaseModel, Field
 
 
 class PredictionResponse(BaseModel):
-    id: int
+    prediction_id: int = Field(alias="id")
     employee_id: int
-    attrition: int
-    churn_probability: float
+    prediction: int = Field(alias="attrition")
+    probability: float = Field(alias="churn_probability")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 class RetentionPlanRequest(BaseModel):
